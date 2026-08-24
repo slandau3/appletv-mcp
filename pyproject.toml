@@ -1,0 +1,14 @@
+[project]
+name = "appletv-mcp"
+version = "0.2.0"
+description = "MCP server for full Apple TV control: remote, apps, deep links, JustWatch title search, YouTube playback"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=3.4.7",
+    "httpx>=0.27",
+    "yt-dlp>=2024.1.1",
+    # Unmerged fork fixing play_url on tvOS 26 (upstream PR #2846,
+    # issues #2821/#2774). Switch back to "pyatv>=0.19" once merged.
+    "pyatv @ git+https://github.com/jlacivita/pyatv@8848ad3fd9ae46b8eb733bfc667b536a28f04c5a",
+]

@@ -1,0 +1,11 @@
+# Local credentials and logs — NEVER commit
+appletv.json
+pair.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
