@@ -361,23 +361,29 @@ async def atv_youtube(
         return await _run(open_in_app, device)
 
     async def call(atv):
-        # play_url blocks monitoring playback until the media ends — run
-        # it as a task, give the TV a few seconds to start, then return.
-        # Playback is queued on the TV and survives the tool returning.
-        play_task = asyncio.ensure_future(atv.stream.play_url(stream_url))
+        return await _play_stream_call(atv, title, stream_url)
 
-        def _log_late_failure(task: asyncio.Task) -> None:
-            if not task.cancelled() and task.exception() is not None:
-                print(
-                    f"Playback ended with error: {task.exception()}",
-                    file=sys.stderr,
-                )
+    return await _run(call, device)
 
-        play_task.add_done_callback(_log_late_failure)
-        await asyncio.sleep(8)
-        if play_task.done() and play_task.exception() is not None:
-            raise play_task.exception()
-        return f"Playing: {title}"
+
+@mcp.tool()
+async def atv_play(url: str, device: str | None = None) -> str:
+    """Play any video URL on the TV in the native system player: direct
+    media files (.mp4, .m3u8, .mov, ...) or a video page from any site
+    yt-dlp supports (~1800: Vimeo, Twitch, X, news sites, most embed
+    players). The stream is extracted, then queued on the TV via
+    AirPlay — playback continues after the tool returns. DRM-protected
+    services (Netflix, Disney+, ...) cannot be extracted; use atv_watch
+    or atv_open_url for those."""
+    try:
+        title, stream_url = await asyncio.get_running_loop(
+        ).run_in_executor(None, _page_resolve, url)
+    except Exception as e:
+        return f"Error resolving video: {type(e).__name__}: {e}"
+
+    async def call(atv):
+        prefix = f"Found: {title}\n" if title != url else ""
+        return prefix + await _play_stream_call(atv, title, stream_url)
 
     return await _run(call, device)
 
@@ -484,13 +490,52 @@ async def atv_scan() -> str:
 
 # -------------------------------------------------------------- helpers
 
-def _resolve_youtube(vid: str | None, terms: str):
-    """Return (video_id, title, stream_url) for an id or search terms.
+def _pick_stream(entry: dict, fallback_title: str) -> tuple[str, str]:
+    """Pick (title, stream_url) from a yt-dlp info entry.
 
     Prefers the HLS master manifest: the Apple TV's native player
     handles adaptive variants and separate audio renditions itself.
-    Falls back to the best progressive MP4 when no HLS is offered.
-    (Progressive MP4s are rare without a yt-dlp JS runtime.)"""
+    Falls back to the best progressive format (video+audio in one file).
+    """
+    formats = entry.get("formats", [])
+    hls = next((f for f in formats if f.get("manifest_url")), None)
+    if hls is not None:
+        return entry.get("title", fallback_title), hls["manifest_url"]
+    progressive = [
+        f for f in formats
+        if f.get("vcodec", "none") != "none"
+        and f.get("acodec", "none") != "none"
+        and f.get("url")
+    ]
+    if progressive:
+        best = max(progressive, key=lambda f: f.get("height") or 0)
+        return entry.get("title", fallback_title), best["url"]
+    # Some extractors put a direct URL on the entry without formats.
+    if entry.get("url") and not formats:
+        return entry.get("title", fallback_title), entry["url"]
+    raise RuntimeError(
+        "No playable stream found (unsupported or DRM-protected page)"
+    )
+
+
+def _page_resolve(url: str) -> tuple[str, str]:
+    """Resolve any video page URL to (title, stream_url).
+
+    Direct media files skip extraction; everything else goes through
+    yt-dlp, which supports ~1800 sites. DRM services (Netflix etc.)
+    cannot be extracted — use atv_watch/atv_open_url for those."""
+    if re.search(r"\.(mp4|m3u8|mov|m4v|webm)(\?|#|$)", url, re.I):
+        return url, url
+    import yt_dlp
+
+    with yt_dlp.YoutubeDL({"quiet": True, "noplaylist": True}) as ydl:
+        info = ydl.extract_info(url, download=False)
+        entry = (info.get("entries") or [info])[0]
+        return _pick_stream(entry, url)
+
+
+def _resolve_youtube(vid: str | None, terms: str):
+    """Return (video_id, title, stream_url) for an id or search terms."""
     import yt_dlp
 
     opts = {"quiet": True, "noplaylist": True}
@@ -506,20 +551,30 @@ def _resolve_youtube(vid: str | None, terms: str):
             # An 11-char search term misread as a bare video ID.
             info = ydl.extract_info(f"ytsearch1:{terms}", download=False)
         entry = (info.get("entries") or [info])[0]
-        formats = entry.get("formats", [])
-        hls = next((f for f in formats if f.get("manifest_url")), None)
-        if hls is not None:
-            return entry["id"], entry.get("title", "?"), hls["manifest_url"]
-        progressive = [
-            f for f in formats
-            if f.get("vcodec", "none") != "none"
-            and f.get("acodec", "none") != "none"
-            and f.get("url")
-        ]
-        if not progressive:
-            raise RuntimeError("No playable stream found for this video")
-        best = max(progressive, key=lambda f: f.get("height") or 0)
-        return entry["id"], entry.get("title", "?"), best["url"]
+        title, stream_url = _pick_stream(entry, "?")
+        return entry["id"], title, stream_url
+
+
+async def _play_stream_call(atv, title: str, stream_url: str) -> str:
+    """Queue a stream via AirPlay and confirm it started.
+
+    play_url blocks monitoring playback until the media ends — run it as
+    a task, give the TV a few seconds to start, then return. Playback is
+    queued on the TV itself and survives the tool returning."""
+    play_task = asyncio.ensure_future(atv.stream.play_url(stream_url))
+
+    def _log_late_failure(task: asyncio.Task) -> None:
+        if not task.cancelled() and task.exception() is not None:
+            print(
+                f"Playback ended with error: {task.exception()}",
+                file=sys.stderr,
+            )
+
+    play_task.add_done_callback(_log_late_failure)
+    await asyncio.sleep(8)
+    if play_task.done() and play_task.exception() is not None:
+        raise play_task.exception()
+    return f"Playing: {title}"
 
 
 async def _justwatch_search(query: str) -> list[dict] | None:

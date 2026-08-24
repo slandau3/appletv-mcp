@@ -15,6 +15,7 @@ server.
 | --- | --- |
 | `atv_watch` | "Pull up Severance" — JustWatch search → deep link straight into the title (Apple TV+, Disney+, Max, Hulu, Prime, Peacock, …) |
 | `atv_youtube` | Play any YouTube video by URL or plain search terms, full-screen via AirPlay (optionally inside the YouTube app) |
+| `atv_play` | Play ANY video URL: direct media (.mp4/.m3u8) or a page from ~1,800 sites via yt-dlp. No DRM services |
 | `atv_open_url` | Open any deep link; tvOS routes it to the right app |
 | `atv_launch_app` / `atv_list_apps` | Launch apps by friendly name; list installed apps |
 | `atv_remote` | Full remote: navigation, select, menu, home, play/pause, stop, next/previous, volume, sleep/wake |
@@ -71,8 +72,10 @@ apply to the pairing config itself).
   `atv_launch_app("netflix")` + `atv_type(...)`.
 - JustWatch lookups default to US/en; override with `ATV_JW_COUNTRY` /
   `ATV_JW_LANGUAGE`.
-- YouTube streams are pushed as HLS via AirPlay 2: playback is queued on
-  the TV and continues after the tool returns. URLs expire after ~6h.
+- YouTube and `atv_play` streams are pushed as HLS via AirPlay 2:
+  playback is queued on the TV and continues after the tool returns.
+  URLs expire after ~6h. Some sites (e.g. Vimeo) block yt-dlp
+  extraction with a 403 — AirPlay from a phone/browser is the fallback.
 - A `FetchAttentionState failed` warning at connect time is benign
   (fork quirk); commands still work.
 - Tested on tvOS 26 (Apple TV 4K gen 3). tvOS 13+ should work.
