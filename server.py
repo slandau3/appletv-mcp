@@ -23,7 +23,7 @@ from pathlib import Path
 import httpx
 import pyatv
 from fastmcp import FastMCP
-from pyatv.const import Protocol
+from pyatv.const import Protocol, RepeatState, ShuffleState
 
 CONFIG_PATH = Path.home() / ".config" / "appletv-remote" / "devices.json"
 
@@ -59,9 +59,22 @@ APP_ALIASES = {
 
 REMOTE_ACTIONS = [
     "up", "down", "left", "right", "select", "menu", "home",
+    "top_menu", "home_hold", "control_center", "guide", "screensaver",
     "play", "pause", "play_pause", "stop", "next", "previous",
+    "skip_forward", "skip_backward", "channel_up", "channel_down",
     "volume_up", "volume_down", "suspend", "wakeup",
 ]
+
+REPEAT_MODES = {
+    "off": RepeatState.Off,
+    "track": RepeatState.Track,
+    "all": RepeatState.All,
+}
+SHUFFLE_MODES = {
+    "off": ShuffleState.Off,
+    "songs": ShuffleState.Songs,
+    "albums": ShuffleState.Albums,
+}
 
 JUSTWATCH_GRAPHQL = "https://apis.justwatch.com/graphql"
 
@@ -233,10 +246,12 @@ async def _run(
 
 @mcp.tool()
 async def atv_remote(action: str, device: str | None = None) -> str:
-    """Press a remote-control button. One of: up, down, left, right, select,
-    menu (back), home, play, pause, play_pause, stop, next, previous,
-    volume_up, volume_down, suspend (sleep), wakeup. Never blind-press
-    buttons to 'confirm a dialog' — you cannot see the TV screen."""
+    """Press a remote-control button. One of: up, down, left, right,
+    select, menu (back), home, top_menu, home_hold, control_center,
+    guide, screensaver, play, pause, play_pause, stop, next, previous,
+    skip_forward, skip_backward, channel_up, channel_down, volume_up,
+    volume_down, suspend (sleep), wakeup. Never blind-press buttons to
+    'confirm a dialog' — you cannot see the TV screen."""
     action = action.lower().strip()
     if action not in REMOTE_ACTIONS:
         return f"Unknown action '{action}'. Valid: {', '.join(REMOTE_ACTIONS)}"
@@ -246,6 +261,94 @@ async def atv_remote(action: str, device: str | None = None) -> str:
         return f"Pressed {action}"
 
     return await _run(call, device)
+
+
+@mcp.tool()
+async def atv_volume(level: str | None = None, device: str | None = None) -> str:
+    """Get or set volume. level: a number 0-100 to set, 'up'/'down' to
+    step, or omit to read the current volume."""
+    async def call(atv):
+        if level is None or level == "get":
+            return f"volume={atv.audio.volume:.0f}"
+        value = level.lower().strip()
+        if value == "up":
+            await atv.audio.volume_up()
+            return f"volume={atv.audio.volume:.0f}"
+        if value == "down":
+            await atv.audio.volume_down()
+            return f"volume={atv.audio.volume:.0f}"
+        try:
+            numeric = float(value)
+        except ValueError:
+            return "level must be 0-100, 'up', 'down', or omitted"
+        if not 0 <= numeric <= 100:
+            return "level must be between 0 and 100"
+        await atv.audio.set_volume(numeric)
+        return f"volume set to {numeric:.0f}"
+
+    return await _run(call, device)
+
+
+@mcp.tool()
+async def atv_seek(seconds: int, device: str | None = None) -> str:
+    """Seek to a position (in seconds) in the currently playing media."""
+    async def call(atv):
+        await atv.remote_control.set_position(seconds)
+        return f"Seeked to {seconds}s"
+
+    return await _run(call, device)
+
+
+@mcp.tool()
+async def atv_repeat(mode: str, device: str | None = None) -> str:
+    """Set repeat mode: off, track, or all."""
+    mode = mode.lower().strip()
+    if mode not in REPEAT_MODES:
+        return f"Unknown mode '{mode}'. Valid: {', '.join(REPEAT_MODES)}"
+
+    async def call(atv):
+        await atv.remote_control.set_repeat(REPEAT_MODES[mode])
+        return f"Repeat: {mode}"
+
+    return await _run(call, device)
+
+
+@mcp.tool()
+async def atv_shuffle(mode: str, device: str | None = None) -> str:
+    """Set shuffle mode: off, songs, or albums."""
+    mode = mode.lower().strip()
+    if mode not in SHUFFLE_MODES:
+        return f"Unknown mode '{mode}'. Valid: {', '.join(SHUFFLE_MODES)}"
+
+    async def call(atv):
+        await atv.remote_control.set_shuffle(SHUFFLE_MODES[mode])
+        return f"Shuffle: {mode}"
+
+    return await _run(call, device)
+
+
+@mcp.tool()
+async def atv_audio_outputs(
+    select: str | None = None, device: str | None = None
+) -> str:
+    """List AirPlay audio outputs (e.g. HomePods), or route audio to one
+    by passing select='<name>'."""
+    async def call(atv):
+        devices = atv.audio.output_devices
+        if select is None:
+            if not devices:
+                return "No audio outputs found."
+            return "\n".join(f"{d.name} — {d.identifier}" for d in devices)
+        match = next(
+            (d for d in devices if select.lower() in d.name.lower()), None
+        )
+        if match is None:
+            names = ", ".join(d.name for d in devices) or "none"
+            return f"No output matching '{select}'. Available: {names}"
+        await atv.audio.set_output_devices([match.identifier])
+        return f"Audio output set to {match.name}"
+
+    return await _run(call, device, idempotent=(select is None))
 
 
 @mcp.tool()
@@ -400,22 +503,33 @@ async def atv_list_apps(device: str | None = None) -> str:
 
 @mcp.tool()
 async def atv_now_playing(device: str | None = None) -> str:
-    """What is currently playing: title, artist/app, position, and state."""
+    """What is currently playing: title, artist, frontmost app, position,
+    and playback state."""
     async def call(atv):
         p = await atv.metadata.playing()
+        app = None
+        try:
+            app = atv.metadata.app
+        except Exception:
+            pass
         return (
             f"state={p.device_state} title={p.title} artist={p.artist} "
-            f"album={p.album} position={p.position}/{p.total_time}s"
+            f"album={p.album} app={app} position={p.position}/{p.total_time}s"
         )
 
     return await _run(call, device, idempotent=True)
 
 
 @mcp.tool()
-async def atv_type(text: str, device: str | None = None) -> str:
+async def atv_type(
+    text: str, clear: bool = False, device: str | None = None
+) -> str:
     """Type text into the focused on-screen text field (e.g. a search box).
-    The field must already be focused on screen."""
+    The field must already be focused on screen. Set clear=True to empty
+    the field first."""
     async def call(atv):
+        if clear:
+            await atv.keyboard.text_clear()
         await atv.keyboard.text_append(text)
         return f"Typed: {text}"
 

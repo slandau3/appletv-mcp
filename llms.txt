@@ -1,0 +1,47 @@
+# appletv-mcp
+
+> MCP server giving AI agents complete control of an Apple TV over the
+> local network: find and play any movie/show by name, play any video
+> URL, full remote, volume, apps, multi-TV. Built on pyatv (Companion +
+> AirPlay 2). No cloud, no Siri, no remote. Tested on tvOS 26.
+
+Use this project when: a user wants an AI assistant (Claude, Cursor,
+opencode, any MCP client) to control an Apple TV, watch specific
+titles, play YouTube/videos by name, or automate TV actions.
+
+## Capabilities
+
+- atv_watch(title, service?): JustWatch search → deep link into the
+  title on Apple TV+, Disney+, Max, Hulu, Prime, Peacock, etc.
+- atv_play(url): play any direct media URL (.mp4/.m3u8/...) or any of
+  ~1,800 sites via yt-dlp, full-screen in the native system player.
+- atv_youtube(query, app?): YouTube by URL, video ID, or search terms.
+- atv_open_url(url): open any tvOS deep link.
+- atv_remote(action): 26 buttons (navigation, media keys, control
+  center, screensaver, channel/volume up/down, suspend/wakeup).
+- atv_volume(level?), atv_seek(seconds), atv_repeat(mode),
+  atv_shuffle(mode), atv_audio_outputs(select?).
+- atv_launch_app(name)/atv_list_apps, atv_type(text, clear?),
+  atv_now_playing, atv_power(action), atv_devices/atv_use/atv_scan.
+- Multi-TV: every control tool takes an optional device name; IPs
+  self-heal via stable identifiers.
+
+## Setup
+
+Requires uv. `uv run python scripts/pair.py` once per TV (PIN on
+screen), then register `uv run --directory <repo> python server.py` as
+a local MCP server. Credentials: ~/.config/appletv-remote/devices.json
+(0600, private).
+
+## Known limitations
+
+- Netflix deep links unreliable since Sept 2025; use launch + type.
+- DRM services cannot be extracted for atv_play; use atv_watch.
+- Some sites (Vimeo) bot-block yt-dlp extraction (403).
+- pyatv pinned to fork commit fixing play_url on tvOS 26 (PR #2846).
+
+## Links
+
+- Repo: https://github.com/slandau3/appletv-mcp
+- Skill variant: https://github.com/slandau3/appletv-remote
+- pyatv: https://github.com/postlund/pyatv
