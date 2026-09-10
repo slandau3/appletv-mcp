@@ -244,7 +244,12 @@ async def _run(
 
 # ----------------------------------------------------------------- tools
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": False,
+})
 async def atv_remote(action: str, device: str | None = None) -> str:
     """Press a remote-control button. One of: up, down, left, right,
     select, menu (back), home, top_menu, home_hold, control_center,
@@ -263,7 +268,12 @@ async def atv_remote(action: str, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": False,
+})
 async def atv_volume(level: str | None = None, device: str | None = None) -> str:
     """Get or set volume. level: a number 0-100 to set, 'up'/'down' to
     step, or omit to read the current volume."""
@@ -289,7 +299,12 @@ async def atv_volume(level: str | None = None, device: str | None = None) -> str
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_seek(seconds: int, device: str | None = None) -> str:
     """Seek to a position (in seconds) in the currently playing media."""
     async def call(atv):
@@ -299,7 +314,12 @@ async def atv_seek(seconds: int, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_repeat(mode: str, device: str | None = None) -> str:
     """Set repeat mode: off, track, or all."""
     mode = mode.lower().strip()
@@ -313,7 +333,12 @@ async def atv_repeat(mode: str, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_shuffle(mode: str, device: str | None = None) -> str:
     """Set shuffle mode: off, songs, or albums."""
     mode = mode.lower().strip()
@@ -327,7 +352,12 @@ async def atv_shuffle(mode: str, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_audio_outputs(
     select: str | None = None, device: str | None = None
 ) -> str:
@@ -351,7 +381,12 @@ async def atv_audio_outputs(
     return await _run(call, device, idempotent=(select is None))
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": False,
+})
 async def atv_launch_app(app: str, device: str | None = None) -> str:
     """Launch an app by friendly name (netflix, youtube, disney+, max, hulu,
     prime video, peacock, paramount+, plex, spotify, tv, music, settings,
@@ -365,7 +400,12 @@ async def atv_launch_app(app: str, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": True,
+})
 async def atv_open_url(url: str, device: str | None = None) -> str:
     """Open a deep link on the Apple TV; tvOS routes it to the app that
     claims it. The way to pull up a specific movie or episode directly.
@@ -382,7 +422,12 @@ async def atv_open_url(url: str, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": True,
+})
 async def atv_watch(
     title: str, service: str | None = None, device: str | None = None
 ) -> str:
@@ -424,7 +469,12 @@ async def atv_watch(
     return await _run(open_title, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": True,
+})
 async def atv_youtube(
     query: str, app: bool = False, device: str | None = None
 ) -> str:
@@ -469,7 +519,12 @@ async def atv_youtube(
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": True,
+})
 async def atv_play(url: str, device: str | None = None) -> str:
     """Play any video URL on the TV in the native system player: direct
     media files (.mp4, .m3u8, .mov, ...) or a video page from any site
@@ -491,7 +546,12 @@ async def atv_play(url: str, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_list_apps(device: str | None = None) -> str:
     """List apps installed on the Apple TV (name + bundle identifier)."""
     async def call(atv):
@@ -501,7 +561,12 @@ async def atv_list_apps(device: str | None = None) -> str:
     return await _run(call, device, idempotent=True)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_now_playing(device: str | None = None) -> str:
     """What is currently playing: title, artist, frontmost app, position,
     and playback state."""
@@ -520,7 +585,12 @@ async def atv_now_playing(device: str | None = None) -> str:
     return await _run(call, device, idempotent=True)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": False,
+})
 async def atv_type(
     text: str, clear: bool = False, device: str | None = None
 ) -> str:
@@ -536,7 +606,12 @@ async def atv_type(
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_power(action: str, device: str | None = None) -> str:
     """Power control: 'sleep' (turns off TV/AVR via HDMI-CEC) or 'wake'."""
     action = action.lower().strip()
@@ -553,7 +628,12 @@ async def atv_power(action: str, device: str | None = None) -> str:
     return await _run(call, device)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_devices() -> str:
     """List paired Apple TVs and which is the default."""
     try:
@@ -569,7 +649,12 @@ async def atv_devices() -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_use(name: str) -> str:
     """Set the default Apple TV used when no device is specified."""
     try:
@@ -586,7 +671,12 @@ async def atv_use(name: str) -> str:
         return f"Error: {e}"
 
 
-@mcp.tool()
+@mcp.tool(annotations={
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+})
 async def atv_scan() -> str:
     """Scan the network for Apple TVs (name, model, address)."""
     try:
