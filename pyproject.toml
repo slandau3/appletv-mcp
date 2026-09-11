@@ -14,3 +14,15 @@ dependencies = [
     # issues #2821/#2774). Switch back to "pyatv>=0.19" once merged.
     "pyatv @ git+https://github.com/jlacivita/pyatv@8848ad3fd9ae46b8eb733bfc667b536a28f04c5a",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning:biplist"]
+pythonpath = ["."]
+testpaths = ["tests"]

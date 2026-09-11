@@ -14,6 +14,7 @@
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776ab"/>
   <img alt="tvOS 26 tested" src="https://img.shields.io/badge/tvOS-26%20tested-000000"/>
   <img alt="MCP compatible" src="https://img.shields.io/badge/MCP-compatible-5e5ce6"/>
+  <a href="https://m8ven.ai/mcp/slandau3/appletv-mcp"><img alt="M8ven Score" src="https://m8ven.ai/badge/mcp/slandau3/appletv-mcp"/></a>
 </p>
 
 ---
